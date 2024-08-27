@@ -2,8 +2,10 @@ package saltutil
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/TheCacophonyProject/go-utils/logging"
@@ -16,8 +18,37 @@ const (
 	minionIdFile  = "/etc/salt/minion_id"
 )
 
+type Grains struct {
+	DeviceName  string `json:"device_name,omitempty"`
+	Environment string `json:"environment,omitempty"`
+	Group       string `json:"group,omitempty"`
+}
+
+func SetGrains(grains Grains, log *logrus.Logger) error {
+	// Setup logger if none is provided
+	if log == nil {
+		log = logging.NewLogger("info")
+	}
+
+	grainsJSON, err := json.Marshal(grains)
+	if err != nil {
+		log.Errorf("Failed to marshal grains: %v", err)
+		return err
+	}
+
+	command := []string{"salt-call", "grains.setvals", string(grainsJSON)}
+	log.Debugf("Running command: %s", strings.Join(command, " "))
+	out, err := exec.Command(command[0], command[1:]...).CombinedOutput()
+	if err != nil {
+		log.Errorf("Failed to set grains: %s, error: %v, when running: %s", string(out), err, strings.Join(command, " "))
+		return err
+	}
+
+	return nil
+}
+
 // GetSaltGrains returns the salt grains. Optional to pass a logger, pass nil to use default.
-func GetSaltGrains(log *logrus.Logger) (map[string]string, error) {
+func GetSaltGrains(log *logrus.Logger) (*Grains, error) {
 	// Setup logger if none is provided
 	if log == nil {
 		log = logging.NewLogger("info")
@@ -29,7 +60,7 @@ func GetSaltGrains(log *logrus.Logger) (map[string]string, error) {
 	if os.IsNotExist(err) {
 		// Some devices will not have any grains set so this is not an error
 		log.Debugf("No grains file found: %v", err)
-		return grains, nil
+		return &Grains{}, nil
 	} else if err != nil {
 		log.Errorf("Failed to open grains file: %v", err)
 		return nil, err
@@ -57,7 +88,22 @@ func GetSaltGrains(log *logrus.Logger) (map[string]string, error) {
 		return nil, err
 	}
 
-	return grains, nil
+	// Return the grains
+	grainsJSON, err := json.Marshal(grains)
+	if err != nil {
+		log.Errorf("Failed to marshal grains: %v", err)
+		return nil, err
+	}
+	log.Debugf("Grains: %s", string(grainsJSON))
+
+	grainsStruct := &Grains{}
+	err = json.Unmarshal(grainsJSON, grainsStruct)
+	if err != nil {
+		log.Errorf("Failed to unmarshal grains: %v", err)
+		return nil, err
+	}
+
+	return grainsStruct, nil
 }
 
 func GetNodegroupFromFile() (string, error) {
@@ -67,6 +113,7 @@ func GetNodegroupFromFile() (string, error) {
 	}
 	return strings.TrimSpace(string(nodegroup)), nil
 }
+
 func GetMinionID(log *logrus.Logger) (string, error) {
 	// Setup logger if none is provided
 	if log == nil {
