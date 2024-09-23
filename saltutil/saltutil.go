@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/TheCacophonyProject/go-utils/logging"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -24,7 +23,7 @@ type Grains struct {
 	Group       string `json:"group,omitempty"`
 }
 
-func SetGrains(grains Grains, log *logrus.Logger) error {
+func SetGrains(grains Grains, log *logging.Logger) error {
 	// Setup logger if none is provided
 	if log == nil {
 		log = logging.NewLogger("info")
@@ -48,7 +47,7 @@ func SetGrains(grains Grains, log *logrus.Logger) error {
 }
 
 // GetSaltGrains returns the salt grains. Optional to pass a logger, pass nil to use default.
-func GetSaltGrains(log *logrus.Logger) (*Grains, error) {
+func GetSaltGrains(log *logging.Logger) (*Grains, error) {
 	// Setup logger if none is provided
 	if log == nil {
 		log = logging.NewLogger("info")
@@ -114,7 +113,7 @@ func GetNodegroupFromFile() (string, error) {
 	return strings.TrimSpace(string(nodegroup)), nil
 }
 
-func GetMinionID(log *logrus.Logger) (string, error) {
+func GetMinionID(log *logging.Logger) (string, error) {
 	// Setup logger if none is provided
 	if log == nil {
 		log = logging.NewLogger("info")

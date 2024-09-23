@@ -12,8 +12,12 @@ type LogArgs struct {
 	LogLevel string `arg:"-l, --log-level" default:"info" help:"Set the logging level (debug, info, warn, error)"`
 }
 
+type Logger struct {
+	*logrus.Logger
+}
+
 // NewLogger returns a new logger with the given log level (info, debug, warn, error)
-func NewLogger(logLevel string) *logrus.Logger {
+func NewLogger(logLevel string) *Logger {
 	log := logrus.New()
 	log.Formatter = new(customFormatter)
 	switch logLevel {
@@ -29,7 +33,7 @@ func NewLogger(logLevel string) *logrus.Logger {
 		log.SetLevel(logrus.InfoLevel)
 		log.Warnf("Unknown log level '%s', defaulting to info", logLevel)
 	}
-	return log
+	return &Logger{log}
 }
 
 type customFormatter struct{}
