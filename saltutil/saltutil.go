@@ -3,6 +3,7 @@ package saltutil
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -23,7 +24,12 @@ type Grains struct {
 	Group       string `json:"group,omitempty"`
 }
 
+var ErrNoSaltMinionID = errors.New("no salt minion ID")
+
 func SetGrains(grains Grains, log *logging.Logger) error {
+	if !IsSaltIdSet() {
+		return ErrNoSaltMinionID
+	}
 	// Setup logger if none is provided
 	if log == nil {
 		log = logging.NewLogger("info")
@@ -48,6 +54,9 @@ func SetGrains(grains Grains, log *logging.Logger) error {
 
 // GetSaltGrains returns the salt grains. Optional to pass a logger, pass nil to use default.
 func GetSaltGrains(log *logging.Logger) (*Grains, error) {
+	if !IsSaltIdSet() {
+		return nil, ErrNoSaltMinionID
+	}
 	// Setup logger if none is provided
 	if log == nil {
 		log = logging.NewLogger("info")
@@ -106,6 +115,9 @@ func GetSaltGrains(log *logging.Logger) (*Grains, error) {
 }
 
 func GetNodegroupFromFile() (string, error) {
+	if !IsSaltIdSet() {
+		return "", ErrNoSaltMinionID
+	}
 	nodegroup, err := os.ReadFile(nodegroupFile)
 	if err != nil {
 		return "", err
@@ -114,6 +126,9 @@ func GetNodegroupFromFile() (string, error) {
 }
 
 func GetMinionID(log *logging.Logger) (string, error) {
+	if !IsSaltIdSet() {
+		return "", ErrNoSaltMinionID
+	}
 	// Setup logger if none is provided
 	if log == nil {
 		log = logging.NewLogger("info")
@@ -128,4 +143,9 @@ func GetMinionID(log *logging.Logger) (string, error) {
 	id := strings.TrimSpace(string(idRaw))
 	log.Debugf("Minion ID: '%s'", id)
 	return id, nil
+}
+
+func IsSaltIdSet() bool {
+	_, err := os.Stat(minionIdFile)
+	return err == nil
 }
